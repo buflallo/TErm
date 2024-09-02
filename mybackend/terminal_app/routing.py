@@ -1,6 +1,7 @@
-from django.urls import path
+from django.urls import path, re_path
 from . import consumers
 
 websocket_urlpatterns = [
-    path('ws/terminal/<int:session_id>/', consumers.TerminalConsumer.as_asgi()),
+    re_path(r'ws/terminal/(?P<container_id>[^/]+)/$', consumers.TerminalConsumer.as_asgi()),
+    path('ws/job-status/', consumers.JobConsumer.as_asgi()),
 ]

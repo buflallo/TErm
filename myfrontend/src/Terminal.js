@@ -1,77 +1,101 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Terminal as XTerminal } from 'xterm';
-import 'xterm/css/xterm.css';
 
-const WebTerminal = ({ connection, onDisconnect }) => {
+
+
+import React, { act, useEffect, useRef, useState } from 'react';
+import { Terminal as XTermTerminal } from 'xterm';
+import { FitAddon } from 'xterm-addon-fit';
+import 'xterm/css/xterm.css'; // Import xterm styles
+
+const Terminal = ({ connection, onDisconnect, activeTerminals }) => {
   const terminalRef = useRef(null);
-  const wsRef = useRef(null);
-  const terminalInstanceRef = useRef(null);
+  const fitAddon = useRef(new FitAddon());
+  const socketRef = useRef(null);
+  const terminalInstance = useRef(null);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-
+//{
+//   "selectedSystem": {
+//     "id": 1,
+//     "name": "Debian",
+//     "imageUrl": "/systems/logo-debian.png"
+//   },
+//   "selectedPackages": [
+//     2
+//   ],
+//   "isConnected": false,
+//   "id": 1
+// }
   useEffect(() => {
     if (connection) {
-      terminalInstanceRef.current = new XTerminal();
-      terminalInstanceRef.current.open(terminalRef.current);
+      const socket = new WebSocket(`ws://localhost:8001/ws/terminal/${connection.selectedSystem.containerId}/`);
+      socketRef.current = socket;
 
-      wsRef.current = new WebSocket(`ws://localhost:8001/ws/terminal/${connection.id}/`);
-
-      wsRef.current.onopen = () => {
-        console.log('WebSocket connection opened');
+      socket.onopen = () => {
+        console.log('WebSocket connection established');
         setConnectionStatus('connected');
-        wsRef.current.send(JSON.stringify(connection));
+        // Optionally send a message to the server here if needed
       };
 
-      wsRef.current.onmessage = (event) => {
-        console.log('Received message:', event.data);
-        if (event.data.startsWith('{') || event.data.startsWith('[')) {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.status === 'error') {
-              setConnectionStatus('error');
-              terminalInstanceRef.current.write(`\n[Error] ${data.message}\n`);
-            } else if (data.status === 'connected') {
-              setConnectionStatus('connected');
-            } else {
-              terminalInstanceRef.current.write(data.output);
-            }
-          } catch (e) {
-            console.error('Failed to parse message as JSON:', e);
-            terminalInstanceRef.current.write(`\n[Error] Invalid JSON data received.\n`);
-          }
-        } else {
-          terminalInstanceRef.current.write(event.data);
-        }
+      socket.onmessage = (event) => {
+        // console.log('WebSocket message received:', event.data);
+        // const data = JSON.parse(event.data);
+        // if (data.stdout) {
+          terminalInstance.current.write(event.data);  // Write the data to the terminal
+        // }
       };
 
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setConnectionStatus('error');
-        terminalInstanceRef.current.write('\n[Error] WebSocket connection error.\n');
-      };
-
-      wsRef.current.onclose = () => {
+      socket.onclose = () => {
+        // setConnectionStatus('disconnected');
         console.log('WebSocket connection closed');
-        setConnectionStatus('disconnected');
-        terminalInstanceRef.current.write('\n[Info] WebSocket connection closed.\n');
-        onDisconnect(); // Notify parent component to remove the terminal
+        
+        // terminalInstance.current.write('\n[Info] WebSocket connection closed.\n');
+        // onDisconnect(); // Notify parent component to remove the terminal
+
       };
 
-      terminalInstanceRef.current.onData((data) => {
-        if (wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(data);
+      socket.onerror = (error) => {
+        setConnectionStatus('error');
+        terminalInstance.current.write('\n[Error] WebSocket connection error.\n');
+        console.error('WebSocket error:', error);
+      };
+
+      // Initialize xterm.js Terminal
+      terminalInstance.current = new XTermTerminal({
+        cursorBlink: true,
+        cols: 80,
+        rows: 24,
+        theme: {
+          background: '#000000',
+          foreground: '#FFFFFF',
+        },
+      });
+
+      terminalInstance.current.loadAddon(fitAddon.current);
+
+      // Attach the terminal to the DOM element
+      terminalInstance.current.open(terminalRef.current);
+
+      // Fit terminal size to container
+      fitAddon.current.fit();
+
+      // Handle data input from the terminal
+      terminalInstance.current.onData((data) => {
+        console.log('Data from terminal:', data);
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(data);
         }
       });
 
+      // Cleanup WebSocket and terminal on unmount
       return () => {
-        if (wsRef.current) {
-          wsRef.current.close();
+        if (socketRef.current) {
+          socketRef.current.close();
         }
-        if (terminalInstanceRef.current) {
-          terminalInstanceRef.current.dispose();
+        if (terminalInstance.current) {
+          terminalInstance.current.dispose();
         }
       };
     }
-  }, [connection]);
+  }, [activeTerminals]);
 
   return (
     <div className="terminal">
@@ -81,4 +105,4 @@ const WebTerminal = ({ connection, onDisconnect }) => {
   );
 };
 
-export default WebTerminal;
+export default Terminal;

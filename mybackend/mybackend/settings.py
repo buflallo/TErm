@@ -57,9 +57,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+# ]
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'mybackend.urls'
 
@@ -133,7 +134,21 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "http://localhost:3000")
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+
+CSP_CONNECT_SRC = (
+    "'self'",
+    "http://localhost:8000",  # Add this line
+    "ws://localhost:8001",     # Allow WebSocket connections
+)
 
 ASGI_APPLICATION = 'mybackend.asgi.application'

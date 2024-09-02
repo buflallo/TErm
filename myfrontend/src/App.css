@@ -14,6 +14,7 @@
   display: flex;
   width: 100%;
   height: 100%;
+  flex-direction: column;
 }
 
 .main-component {
@@ -24,7 +25,7 @@
 }
 
 .terminal {
-  flex: 2;
+  flex: 5;
   padding: 20px;
   background-color: #333;
   color: #fff;

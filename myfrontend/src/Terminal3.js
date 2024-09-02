@@ -20,7 +20,7 @@ const Terminal = () => {
 
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8001/ws/terminal/1');
+    const ws = new WebSocket('ws://localhost:8001/ws/terminal/');
     setSocket(ws);
     console.log('WebSocket connection established');
 

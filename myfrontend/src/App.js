@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Terminal from './Terminal';
 import styled, { createGlobalStyle } from 'styled-components';
 import MainComponent from './MainComponent';
+import Terminals from './Terminals';
+
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -13,14 +15,18 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
-const Terminals = styled.div`
-  display: flex;
-  overflow-y: auto;
-  padding: 20px;
-  flex-direction: column;
-  flex: 2;
-`;
-
+// const Terminals = styled.div`
+//   display: flex;
+//   overflow-y: auto;
+//   padding: 20px;
+//   flex-direction: column;
+//   flex: 5;
+// `;
+const ConnectionStatus = {
+  PENDING: 'Pending',
+  CONNECTED: 'Shutdown',
+  DISCONNECTED: 'Run',
+};
 function App() {
   const [connections, setConnections] = useState([]);
   const [activeTerminals, setActiveTerminals] = useState({});
@@ -28,13 +34,12 @@ function App() {
 
   const handleConnect = (connection) => {
     console.log('Connecting to:', connection );
-    setConnections([...connections, connection]);
-    setActiveTerminals(prev => ({ ...prev, [connection.id]: true }));
+    setConnections(prev => [...prev, connection]);
   };
 
   const handleDisconnect = (connectionId) => {
     console.log('APP Disconnecting from:', connectionId );
-// filter out the connection with the given id
+    // filter out the connection with the given id
     setConnections(prev => prev.filter((conn) => conn.id !== connectionId));
     setActiveTerminals(prev => {
       const active = { ...prev };
@@ -42,6 +47,18 @@ function App() {
       return active
     });
   };
+
+  const handleTerminal = (connectionId) => {
+    if (activeTerminals[connectionId]) {
+      console.log('remove Terminal from:', connectionId );
+      setActiveTerminals(prev => ({ ...prev, [connectionId]: false }));
+    }
+    else
+    {
+      console.log('Terminal on:', connectionId );
+      setActiveTerminals(prev => ({ ...prev, [connectionId]: true }));
+    }
+  }
 
   return (
     <>
@@ -51,24 +68,10 @@ function App() {
           <div className="split-container">
             <MainComponent 
               onConnect={handleConnect} 
-              onDisconnect={handleDisconnect} 
+              onDisconnect={handleDisconnect}
+              onTerminal={handleTerminal}
             />
-            <Terminals>
-            {
-            connections.length > 0 ? (
-            connections.map(connection => (
-              activeTerminals[connection.id] && (
-                <Terminal 
-                  key={connection.id}
-                  connection={connection} 
-                  onDisconnect={() => handleDisconnect(connection.id)}
-                />
-              )
-            ))) : (
-              <h2>No active connections</h2>
-            )
-            }
-            </Terminals>
+            <Terminals connections={connections} activeTerminals={activeTerminals} handleDisconnect={handleDisconnect} />
           </div>
         </header>
       </div>
